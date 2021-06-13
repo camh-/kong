@@ -107,6 +107,27 @@ func (n *Node) AllFlags(hide bool) (out [][]*Flag) {
 	return
 }
 
+// DefaultCmdFlags returns all flags for descendant nodes that are default commands.
+//
+// If "hide" is true hidden flags will be omitted.
+func (n *Node) DefaultCmdFlags(hide bool) (out [][]*Flag) {
+	for _, child := range n.Children {
+		if child.Type == CommandNode && child.Tag.Default != "" {
+			group := []*Flag{}
+			for _, flag := range child.Flags {
+				if !hide || !flag.Hidden {
+					group = append(group, flag)
+				}
+			}
+			if len(group) > 0 {
+				out = append(out, group)
+			}
+			out = append(out, child.DefaultCmdFlags(hide)...)
+		}
+	}
+	return
+}
+
 // Leaves returns the leaf commands/arguments under Node.
 //
 // If "hidden" is true hidden leaves will be omitted.

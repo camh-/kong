@@ -937,6 +937,50 @@ func TestMultipleDefaultCommands(t *testing.T) {
 	require.EqualError(t, err, "can't have more than one default command under  <command>")
 }
 
+func TestDefaultCommandWithArg(t *testing.T) {
+	var cli struct {
+		One struct {
+			Arg string `arg:""`
+		} `cmd:"" default:"1"`
+		Two struct{} `cmd:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"arg"})
+	require.NoError(t, err)
+	require.Equal(t, "arg", cli.One.Arg)
+}
+
+func TestDefaultCommandWithFlag(t *testing.T) {
+	var cli struct {
+		One struct {
+			Arg bool
+		} `cmd:"" default:"1"`
+		Two struct{} `cmd:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--arg"})
+	require.NoError(t, err)
+	require.Equal(t, true, cli.One.Arg)
+}
+
+func TestNestedDefaultCommands(t *testing.T) {
+	var cli struct {
+		One struct {
+			Flag1 string
+			Two   struct {
+				Arg   string `arg:""`
+				Flag2 int
+			} `cmd:"" default:"1"`
+		} `cmd:"" default:"1"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--flag-1", "hello", "--flag-2", "4", "arg"})
+	require.NoError(t, err)
+	require.Equal(t, "hello", cli.One.Flag1)
+	require.Equal(t, 4, cli.One.Two.Flag2)
+	require.Equal(t, "arg", cli.One.Two.Arg)
+}
+
 func TestLoneHpyhen(t *testing.T) {
 	var cli struct {
 		Flag string

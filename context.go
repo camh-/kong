@@ -346,6 +346,9 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	for _, group := range node.AllFlags(false) {
 		flags = append(flags, group...)
 	}
+	for _, group := range node.DefaultCmdFlags(false) {
+		flags = append(flags, group...)
+	}
 
 	for !c.scan.Peek().IsEOL() {
 		token := c.scan.Peek()
@@ -452,6 +455,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				}
 			}
 
+			var defaultBranch *Node
 			// After positional arguments have been consumed, check commands next...
 			for _, branch := range node.Children {
 				if branch.Type == CommandNode && !branch.Hidden {
@@ -465,6 +469,8 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 						Flags:   branch.Flags,
 					})
 					return c.trace(branch)
+				} else if branch.Type == CommandNode && branch.Tag.Default != "" {
+					defaultBranch = branch
 				}
 			}
 
@@ -481,6 +487,15 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 						return c.trace(branch)
 					}
 				}
+			}
+
+			if defaultBranch != nil {
+				c.Path = append(c.Path, &Path{
+					Parent:  node,
+					Command: defaultBranch,
+					Flags:   defaultBranch.Flags,
+				})
+				return c.trace(defaultBranch)
 			}
 
 			return findPotentialCandidates(token.String(), candidates, "unexpected argument %s", token)
